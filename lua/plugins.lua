@@ -19,6 +19,13 @@ return require("packer").startup({
 
 		use("mg979/vim-visual-multi")
 
+		use({
+			"norcalli/nvim-colorizer.lua",
+			config = function()
+				require("colorizer").setup()
+			end,
+		})
+
 		use({ "jdhao/better-escape.vim", event = "InsertEnter" })
 		use("karb94/neoscroll.nvim")
 		use("ggandor/lightspeed.nvim")
@@ -61,6 +68,14 @@ return require("packer").startup({
 		-- Rust
 		use("simrat39/rust-tools.nvim")
 		use({ "stevearc/dressing.nvim" })
+		use({
+			"saecki/crates.nvim",
+			event = { "BufRead Cargo.toml" },
+			requires = { { "nvim-lua/plenary.nvim" } },
+			config = function()
+				require("crates").setup()
+			end,
+		})
 
 		-- LSP
 		use({
@@ -78,6 +93,9 @@ return require("packer").startup({
 			-- pictograms to lsp, VSCode-like.
 			"onsails/lspkind-nvim",
 		})
+
+		-- Copilot
+		use("github/copilot.vim")
 
 		-- For LuaSnip
 		use({
@@ -100,7 +118,7 @@ return require("packer").startup({
 		-- telescope
 
 		use("nvim-telescope/telescope.nvim")
-		use("nvim-telescope/telescope-fzy-native.nvim")
+		-- use("nvim-telescope/telescope-fzy-native.nvim")
 		use("xiyaowong/telescope-emoji.nvim")
 		use({
 			"nvim-telescope/telescope-frecency.nvim",
@@ -109,6 +127,7 @@ return require("packer").startup({
 			end,
 			requires = { "tami5/sqlite.lua" },
 		})
+		use({ "nvim-telescope/telescope-fzf-native.nvim", run = "make" })
 		--
 		-- Lua
 		use({
@@ -200,20 +219,6 @@ return require("packer").startup({
 				require("alpha").setup(require("alpha.themes.startify").opts)
 			end,
 		})
-		-- use({
-		-- 	"startup-nvim/startup.nvim",
-		-- 	requires = { "nvim-telescope/telescope.nvim", "nvim-lua/plenary.nvim" },
-		-- 	config = function()
-		-- 		require("startup").setup()
-		-- 	end,
-		-- })
-		-- use {
-		--   "nvim-telescope/telescope-frecency.nvim",
-		--   config = function()
-		--     require"telescope".load_extension("frecency")
-		--   end,
-		--   requires = {"tami5/sqlite.lua"}
-		-- }
 
 		use("tpope/vim-unimpaired")
 		use("tpope/vim-repeat")
