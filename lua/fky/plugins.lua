@@ -20,6 +20,37 @@ return require("packer").startup({
     -- Packer
     use("wbthomason/packer.nvim")
 
+    -- https://github.com/samjwill/nvim-unception
+    -- Prevent vim-in-vim
+    use({ "samjwill/nvim-unception",
+      config = function()
+        vim.api.nvim_create_autocmd(
+          "User",
+          {
+            pattern = "UnceptionEditRequestReceived",
+            callback = function()
+              -- Toggle the terminal off.
+              require('FTerm').close()
+            end
+          }
+        )
+      end })
+
+    use({
+      "folke/noice.nvim",
+      config = function()
+        require("noice").setup({})
+      end,
+      requires = {
+        -- if you lazy-load any plugin below, make sure to add proper `module="..."` entries
+        "MunifTanjim/nui.nvim",
+        -- OPTIONAL:
+        --   `nvim-notify` is only needed, if you want to use the notification view.
+        --   If not available, we use `mini` as the fallback
+        "rcarriga/nvim-notify",
+      }
+    })
+
     use({ "junegunn/vim-easy-align",
       config = function()
         vim.keymap.set("x", "ga", "<Plug>(EasyAlign)", { noremap = false })
@@ -197,7 +228,12 @@ return require("packer").startup({
       "williamboman/mason-lspconfig.nvim",
     }
 
-    use({ "j-hui/fidget.nvim", branch = "no-fold" })
+    use({ "j-hui/fidget.nvim",
+      config = function()
+        require("fidget").setup()
+      end,
+    })
+
     -- Copilot
     use(
       { "github/copilot.vim",

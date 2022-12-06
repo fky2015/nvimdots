@@ -57,31 +57,42 @@ require("nvim-autopairs").setup({
 -- gitsigns.nvim
 require("gitsigns").setup {
   on_attach = function(bufnr)
-    local function map(mode, lhs, rhs, opts)
-      opts = vim.tbl_extend('force', { noremap = true, silent = true }, opts or {})
-      vim.api.nvim_buf_set_keymap(bufnr, mode, lhs, rhs, opts)
+    local gs = package.loaded.gitsigns
+
+    local function map(mode, l, r, opts)
+      opts = opts or {}
+      opts.buffer = bufnr
+      vim.keymap.set(mode, l, r, opts)
     end
 
     -- Navigation
-    map('n', ']c', "&diff ? ']c' : '<cmd>Gitsigns next_hunk<CR>'", { expr = true })
-    map('n', '[c', "&diff ? '[c' : '<cmd>Gitsigns prev_hunk<CR>'", { expr = true })
+    map('n', ']c', function()
+      if vim.wo.diff then return ']c' end
+      vim.schedule(function() gs.next_hunk() end)
+      return '<Ignore>'
+    end, { expr = true })
+
+    map('n', '[c', function()
+      if vim.wo.diff then return '[c' end
+      vim.schedule(function() gs.prev_hunk() end)
+      return '<Ignore>'
+    end, { expr = true })
 
     -- Actions
-    map('n', '<leader>hs', ':Gitsigns stage_hunk<CR>')
-    map('v', '<leader>hs', ':Gitsigns stage_hunk<CR>')
-    map('n', '<leader>hr', ':Gitsigns reset_hunk<CR>')
-    map('v', '<leader>hr', ':Gitsigns reset_hunk<CR>')
-    map('n', '<leader>hS', '<cmd>Gitsigns stage_buffer<CR>')
-    map('n', '<leader>hu', '<cmd>Gitsigns undo_stage_hunk<CR>')
-    map('n', '<leader>hR', '<cmd>Gitsigns reset_buffer<CR>')
-    map('n', '<leader>hp', '<cmd>Gitsigns preview_hunk<CR>')
-    map('n', '<leader>hb', '<cmd>lua require"gitsigns".blame_line{full=true}<CR>')
-    map('n', '<leader>hd', '<cmd>Gitsigns diffthis<CR>')
-    map('n', '<leader>hD', '<cmd>lua require"gitsigns".diffthis("~")<CR>')
+    map({ 'n', 'v' }, '<leader>hs', ':Gitsigns stage_hunk<CR>')
+    map({ 'n', 'v' }, '<leader>hr', ':Gitsigns reset_hunk<CR>')
+    map('n', '<leader>hS', gs.stage_buffer)
+    map('n', '<leader>hu', gs.undo_stage_hunk)
+    map('n', '<leader>hR', gs.reset_buffer)
+    map('n', '<leader>hp', gs.preview_hunk)
+    map('n', '<leader>hb', function() gs.blame_line { full = true } end)
+    map('n', '<leader>tb', gs.toggle_current_line_blame)
+    map('n', '<leader>hd', gs.diffthis)
+    map('n', '<leader>hD', function() gs.diffthis('~') end)
+    map('n', '<leader>td', gs.toggle_deleted)
 
     -- Text object
-    map('o', 'ih', ':<C-U>Gitsigns select_hunk<CR>')
-    map('x', 'ih', ':<C-U>Gitsigns select_hunk<CR>')
+    map({ 'o', 'x' }, 'ih', ':<C-U>Gitsigns select_hunk<CR>')
   end
 }
 
@@ -224,7 +235,7 @@ vim.keymap.set('n', '<leader>xq', '<CMD>TroubleToggle quickfix<CR>', map_opts)
 vim.keymap.set('n', '<leader>xl', '<CMD>TroubleToggle loclist<CR>', map_opts)
 vim.keymap.set('n', 'gR', '<CMD>TroubleToggle lsp_references<CR>', map_opts)
 
--- nvim-ufl
+-- nvim-ufo
 vim.o.foldcolumn = '1'
 vim.o.foldlevel = 99 -- Using ufo provider need a large value, feel free to decrease the value
 vim.o.foldlevelstart = 99
@@ -233,12 +244,49 @@ vim.o.foldenable = true
 -- Using ufo provider need remap `zR` and `zM`. If Neovim is 0.6.1, remap yourself
 vim.keymap.set('n', 'zR', require('ufo').openAllFolds)
 vim.keymap.set('n', 'zM', require('ufo').closeAllFolds)
+vim.keymap.set('n', 'zr', require('ufo').openFoldsExceptKinds)
+vim.keymap.set('n', 'zm', require('ufo').closeFoldsWith) -- closeAllFolds == closeFoldsWith(0)
+vim.keymap.set("n", "K",
+  function()
+    -- https://github.com/kevinhwang91/nvim-ufo
+    local winid = require('ufo').peekFoldedLinesUnderCursor()
+    if not winid then
+      -- choose one of coc.nvim and nvim lsp
+      vim.lsp.buf.hover()
+    end
+  end
+)
+
+local handler = function(virtText, lnum, endLnum, width, truncate)
+  local newVirtText = {}
+  local suffix = ('  %d '):format(endLnum - lnum)
+  local sufWidth = vim.fn.strdisplaywidth(suffix)
+  local targetWidth = width - sufWidth
+  local curWidth = 0
+  for _, chunk in ipairs(virtText) do
+    local chunkText = chunk[1]
+    local chunkWidth = vim.fn.strdisplaywidth(chunkText)
+    if targetWidth > curWidth + chunkWidth then
+      table.insert(newVirtText, chunk)
+    else
+      chunkText = truncate(chunkText, targetWidth - curWidth)
+      local hlGroup = chunk[2]
+      table.insert(newVirtText, { chunkText, hlGroup })
+      chunkWidth = vim.fn.strdisplaywidth(chunkText)
+      -- str width returned from truncate() may less than 2nd argument, need padding
+      if curWidth + chunkWidth < targetWidth then
+        suffix = suffix .. (' '):rep(targetWidth - curWidth - chunkWidth)
+      end
+      break
+    end
+    curWidth = curWidth + chunkWidth
+  end
+  table.insert(newVirtText, { suffix, 'MoreMsg' })
+  return newVirtText
+end
 
 require('ufo').setup({
-  -- provider_selector = function(bufnr, filetype, buftype)
-  -- provider_selector = function(_, _, _)
-  --   return { 'treesitter', 'indent' }
-  -- end
+  fold_virt_text_handler = handler
 })
 
 vim.g.oscyank_term = 'default'

@@ -92,6 +92,7 @@ cmp.setup.cmdline(':', {
 -- Setup lspconfig.
 local capabilities = require("cmp_nvim_lsp").default_capabilities()
 
+-- https://github.com/kevinhwang91/nvim-ufo
 capabilities.textDocument.foldingRange = {
   dynamicRegistration = false,
   lineFoldingOnly = true
@@ -112,6 +113,8 @@ local m = function(mode, key, result)
   })
 end
 
+
+
 local on_attach = function(client, bufnr)
   illuminate.on_attach(client)
 
@@ -122,7 +125,17 @@ local on_attach = function(client, bufnr)
   m("n", "gd", "lua vim.lsp.buf.definition()")
   m("n", "gy", "lua vim.lsp.buf.type_definition()")
   m("n", "gD", "lua vim.lsp.buf.declaration()")
-  m("n", "K", "lua vim.lsp.buf.hover()")
+  vim.keymap.set("n", "K",
+    function()
+      print("K")
+      -- https://github.com/kevinhwang91/nvim-ufo
+      local winid = require('ufo').peekFoldedLinesUnderCursor()
+      if not winid then
+        -- choose one of coc.nvim and nvim lsp
+        vim.lsp.buf.hover()
+      end
+    end
+  )
   m("n", "gi", "lua vim.lsp.buf.implementation()")
   m("n", "<C-k>", "lua vim.lsp.buf.signature_help()")
   m("i", "<A-i>", "lua vim.lsp.buf.signature_help()")
@@ -261,6 +274,7 @@ local sources = {
   -- null_ls.builtins.diagnostics.selene,
   null_ls.builtins.formatting.shfmt,
   null_ls.builtins.formatting.latexindent,
+  null_ls.builtins.formatting.jq,
   -- null_ls.builtins.code_actions.proselint,
   -- null_ls.builtins.diagnostics.proselint,
   -- null_ls.builtins.formatting.codespell,
@@ -268,7 +282,6 @@ local sources = {
 
 null_ls.setup({ sources = sources })
 
-require("fidget").setup({})
 require("cmp_git").setup()
 
 vim.cmd([[autocmd CursorHold,CursorHoldI * lua require'nvim-lightbulb'.update_lightbulb()]])
